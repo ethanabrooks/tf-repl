@@ -45,17 +45,17 @@ def dec(index):
 
 
 def inc(index, seq):
-    return min(len(seq) - 1, index + 1)
+    return min(len(seq), index + 1)
 
 
+blank_line = ' ' * 50
 history = []
-I = 0
 
 
 def read_input():
-    global I
-
+    I = len(history)
     string = ''
+    history.append(string)
     i = 0
     while True:
         char = getch()
@@ -64,12 +64,13 @@ def read_input():
             print('')
             break
         elif key == 127:  # delete
-            string = string[:-1]
+            i = dec(i)
+            string = string[:i] + ' ' * (len(string) - i)
         elif key == 65:  # up
             I = dec(I)
             string = history[I]
         elif key == 66:  # down
-            I = inc(I, history)
+            I = inc(I, history[:-1])
             string = history[I]
         elif key == 68:  # left
             i = dec(i)
@@ -83,29 +84,42 @@ def read_input():
             pass
         else:
             string = string[:i] + char + string[i:]
+            if I == len(history) - 1:
+                history[I] = string
             i += 1
+        # i = min(len(string), i)
         formatted = highlight(string)
         # formatted = cursor_on(i, formatted)
-        # print('\r>>> ' + formatted, end='')
-        print('\r(' + str(key) + ')>>> ' + formatted, end='')
+        print('\r\033[6;{}H>>> {}'.format(i - 10, formatted + blank_line), end='')
+        # print('\r(' + str(history) + str(I) + ')>>> ' + formatted, end='')
     return string
 
 
-with cursor.HiddenCursor():
-    while not quit:
-        print('>>> ', end='')
-        expr_string = read_input()
-        history.append(expr_string)
-        I = len(history)
+# with cursor.HiddenCursor():
+while not quit:
+    print('>>> ', end='')
+    expr_string = read_input()
+    history[-1] = expr_string
+
+    # quit
+    if expr_string in ['quit', 'q']:
+        response = raw_input('Are you sure? [y|n] ')
+        while response not in ['y', 'n']:
+            response = raw_input('Please enter "y" or "n": ')
+        if response == 'y':
+            exit(0)
+        else:
+            continue
+
+    try:
+        if '=' in expr_string:
+            exec expr_string
+            expr_string = expr_string.split('=')[0]
+        expr = eval(expr_string)
         try:
-            if '=' in expr_string:
-                exec expr_string
-                expr_string = expr_string.split('=')[0]
-            expr = eval(expr_string)
-            try:
-                printf(sess.run(expr))
-            except (RuntimeError, TypeError):  # if not actually a tf expression
-                printf(expr)
-        except Exception as e:
-            print(type(e))
-            print(e)
+            printf(sess.run(expr))
+        except (RuntimeError, TypeError):  # if not actually a tf expression
+            printf(expr)
+    except Exception as e:
+        # print(type(e))
+        print(e)
